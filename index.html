@@ -1,84 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Three.js Mobile VR</title>
-    <style>
-      body { margin: 0; overflow: hidden; }
-      canvas { display: block; }
-    </style>
-  </head>
-  <body>
-    <script type="module">
-      import * as THREE from 'https://unpkg.com/three@0.152.2/build/three.module.js';
-      import { VRButton } from 'https://unpkg.com/three@0.152.2/examples/jsm/webxr/VRButton.js';
+<head>
+  <meta charset="UTF-8" />
+  <title>Immersive Mobile VR with Three.js</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      height: 100%;
+      background: #000;
+    }
+    canvas {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <script type="module">
+    import * as THREE from 'https://unpkg.com/three@0.152.2/build/three.module.js';
+    import { VRButton } from 'https://unpkg.com/three@0.152.2/examples/jsm/webxr/VRButton.js';
+    import { OrbitControls } from 'https://unpkg.com/three@0.152.2/examples/jsm/controls/OrbitControls.js';
 
-      // Scene setup
-      const scene = new THREE.Scene();
-      scene.background = new THREE.Color(0x202020);
+    // Scene
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x101010);
 
-      // Camera
-      const camera = new THREE.PerspectiveCamera(
-        60, // better FOV for mobile VR
-        window.innerWidth / window.innerHeight,
-        0.1,
-        100
+    // Camera
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(0, 1.6, 4); // eye level
+
+    // Renderer
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.xr.enabled = true;
+    document.body.appendChild(renderer.domElement);
+    document.body.appendChild(VRButton.createButton(renderer));
+
+    // Lights
+    const ambient = new THREE.AmbientLight(0xffffff, 0.4);
+    scene.add(ambient);
+
+    const directional = new THREE.DirectionalLight(0xffffff, 0.8);
+    directional.position.set(3, 10, 4);
+    scene.add(directional);
+
+    // Floor
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(50, 50),
+      new THREE.MeshStandardMaterial({ color: 0x222222 })
+    );
+    floor.rotation.x = -Math.PI / 2;
+    scene.add(floor);
+
+    // Skybox-like background
+    const sky = new THREE.Mesh(
+      new THREE.SphereGeometry(40, 32, 32),
+      new THREE.MeshBasicMaterial({ color: 0x111144, side: THREE.BackSide })
+    );
+    scene.add(sky);
+
+    // Main Cube
+    const cube = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshStandardMaterial({ color: 0x00ffff, roughness: 0.3, metalness: 0.6 })
+    );
+    cube.position.set(0, 1.5, -3);
+    scene.add(cube);
+
+    // Floating Orbs for Depth
+    for (let i = 0; i < 50; i++) {
+      const orb = new THREE.Mesh(
+        new THREE.SphereGeometry(0.1, 16, 16),
+        new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff })
       );
-      camera.position.set(0, 1.6, 5); // step back a bit
+      orb.position.set(
+        (Math.random() - 0.5) * 20,
+        Math.random() * 5 + 1,
+        (Math.random() - 0.5) * 20
+      );
+      scene.add(orb);
+    }
 
-      // Renderer
-      const renderer = new THREE.WebGLRenderer({ antialias: true });
+    // Controls (for desktop preview)
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 1.6, 0);
+    controls.update();
+
+    // Animation Loop
+    renderer.setAnimationLoop(() => {
+      cube.rotation.y += 0.01;
+      renderer.render(scene, camera);
+    });
+
+    // Handle Resize
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.xr.enabled = true;
-      document.body.appendChild(renderer.domElement);
-      document.body.appendChild(VRButton.createButton(renderer));
-
-      // Lights
-      const ambient = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
-      scene.add(ambient);
-
-      // Ground
-      const floor = new THREE.Mesh(
-        new THREE.PlaneGeometry(20, 20),
-        new THREE.MeshStandardMaterial({ color: 0x333333 })
-      );
-      floor.rotation.x = -Math.PI / 2;
-      scene.add(floor);
-
-      // Cube
-      const cube = new THREE.Mesh(
-        new THREE.BoxGeometry(1, 1, 1),
-        new THREE.MeshStandardMaterial({ color: 0x00ffcc })
-      );
-      cube.position.set(0, 1.5, 0);
-      scene.add(cube);
-
-      // Background objects (for depth perception)
-      for (let i = 0; i < 30; i++) {
-        const obj = new THREE.Mesh(
-          new THREE.SphereGeometry(0.1, 8, 8),
-          new THREE.MeshStandardMaterial({ color: 0xff4444 })
-        );
-        obj.position.set(
-          (Math.random() - 0.5) * 10,
-          Math.random() * 2 + 0.5,
-          (Math.random() - 0.5) * 10
-        );
-        scene.add(obj);
-      }
-
-      // Animate
-      renderer.setAnimationLoop(() => {
-        cube.rotation.y += 0.01;
-        renderer.render(scene, camera);
-      });
-
-      // Resize
-      window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-      });
-    </script>
-  </body>
+    });
+  </script>
+</body>
 </html>
